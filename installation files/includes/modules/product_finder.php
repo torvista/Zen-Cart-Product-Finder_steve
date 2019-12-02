@@ -5,7 +5,7 @@
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @version $Id: product_finder.php 16-07-2019
  */
-$pfDebug = 1;//set to 1 (not '1') for debugging info
+$pfDebug = 0;//set to 1 (not '1') for debugging info
 if ($pfDebug) {
     echo __LINE__ . ':Product Finder debug ON</div><br>';
 }
@@ -14,7 +14,7 @@ $pf_base_category = (int)PRODUCT_FINDER_PARENT_ID; //USER defined base category
 $pf_category_depth = (int)PRODUCT_FINDER_CATEGORY_DEPTH; //USER defined category depth
 //Note that most of this convoluted POST and GET coding is purely to allow PF to work without javascript...and then behave logically when the dropdowns are changed in various non-logical orders
 //noscript
-$js_disabled = ($_POST['js_disabled'] == 'true' ? true : false);
+$js_disabled = (isset($_POST['js_disabled']) && $_POST['js_disabled'] === 'true');
 if (isset($_GET['pf_dd1_prev'])) {//this page load is a result of a complete PF selection and so was a redirect with GET parameters, and should be in a category
     $prev_dd1 = (int)$_GET['pf_dd1_prev'];
     $prev_dd2 = (int)$_GET['pf_dd2_prev'];
@@ -37,25 +37,25 @@ if ($pfDebug) {
     echo __LINE__ . ':PREV $prev_dd1=' . $prev_dd1 . ' | $prev_dd2=' . $prev_dd2 . ' | $prev_dd3=' . $prev_dd3 . '<br>';
 }
 
-if ($js_disabled && ($post_dd1 == $prev_dd1 && $post_dd2 == $prev_dd2 && $post_dd3 > 0)) {//noscript, a complete NEW selection has been made, so go to that category
-    $cp = $pf_base_category . '_' . $post_dd1 . '_' . $post_dd2 . '_' . $post_dd3;//destination category
-    $link = zen_href_link(FILENAME_DEFAULT,
-        'cPath=' . $cp . '&pf_dd1_prev=' . $post_dd1 . '&pf_dd2_prev=' . $post_dd2 . '&pf_dd3_prev=' . $post_dd3 . '&pf_ns=1');// pf_dd1/2/3_prev: used to populate dropdowns with the selected category data
+if ($js_disabled && empty($_GET['pf_ns']) && ($post_dd1 === $prev_dd1) && ($post_dd2 === $prev_dd2) && ($post_dd3 > 0)) {//noscript, a complete NEW selection has been made, so go to that category
+    $cp = $pf_base_category . '_' . $post_dd1 . '_' . $post_dd2 . '_' . $post_dd3;
+    $link = zen_href_link(FILENAME_DEFAULT, 'cPath=' . $cp . '&pf_dd1_prev=' . $post_dd1 . '&pf_dd2_prev=' . $post_dd2 . '&pf_dd3_prev=' . $post_dd3 . '&pf_ns=1');
+
     if ($pfDebug) {
         echo __LINE__ . ': $link=' . $link . '<br>';
     }
-    zen_redirect($link);
-} elseif (($post_dd1 != $prev_dd1) && ($post_dd1 > 0) && ($post_dd3 == $prev_dd3)) {//noscript, only dd1 has changed: reload the existing page but reset dd2 and dd3
+    zen_redirect($link); //final parameter is the post value to know what was completely selected
+} elseif (($post_dd1 !== $prev_dd1) && ($post_dd1 > 0) && ($post_dd3 === $prev_dd3)) {//noscript, only dd1 has changed: reload the existing page but reset dd2 and dd3
     $post_dd2 = -1;
     $post_dd3 = -1;
-} elseif (($post_dd2 != $prev_dd2) && ($post_dd2 > 0) && ($post_dd3 == $prev_dd3)) {//noscript, only dd2 has changed: reload the existing page but reset dd3
+} elseif (($post_dd2 !== $prev_dd2) && ($post_dd2 > 0) && ($post_dd3 === $prev_dd3)) {//noscript, only dd2 has changed: reload the existing page but reset dd3
     $post_dd3 = -1;
 }
 
 //get current page location if in a category
-if (isset($cPath) && $cPath != '') {//$cPath is only set on a category/product page
-    $pf_cPaths = explode("_", $cPath);
-    if ($pf_cPaths[0] != $pf_base_category) {
+if (isset($cPath) && $cPath !== '') {//$cPath is only set on a category/product page
+    $pf_cPaths = explode('_', $cPath);
+    if ((int)$pf_cPaths[0] !== $pf_base_category) {
         $pf_cPaths = '';
     }
 } else {
@@ -100,7 +100,7 @@ $pf_dd1_array = pf_get_subcategories($pf_base_category); //build the array for d
 $pf_dd2_array = pf_get_subcategories($pf_dd1_selected); //build the array for dropdown2
 $pf_dd3_array = pf_get_subcategories($pf_dd2_selected); //build the array for dropdown3
 
-$cp = isset($cPath) && $cPath != '' ? 'cPath=' . $cPath : ''; //if on a category page, stay there until a complete new selection made (redirect). If on another page, stay there too!
+$cp = isset($cPath) && $cPath !== '' ? 'cPath=' . $cPath : ''; //if on a category page, stay there until a complete new selection made (redirect). If on another page, stay there too!
 echo zen_draw_form('productFinderform', zen_href_link($_GET['main_page'], $cp), 'post', 'id="productFinderform"'); //this action is overridden when JS in use
 //pass current states so code can determine what has changed on each submit and act according, or not.
 echo zen_draw_hidden_field('pf_dd1_prev', $pf_dd1_selected);
@@ -146,5 +146,5 @@ echo zen_draw_hidden_field('pf_dd3_prev', $pf_dd3_selected);
 </ul>
 <?php echo '</form>'; ?>
 </div>
-<!--bof product finder -->
+<!--eof product finder -->
 
